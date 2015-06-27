@@ -4,7 +4,8 @@ extern crate temporary;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{stderr, stdout, Read, Write};
+use std::io::{stderr, stdin, stdout, Read, Write};
+use std::path::Path;
 use std::process::Command;
 use temporary::Directory;
 
@@ -12,8 +13,8 @@ const USAGE: &'static str = "
 Usage: cite [options]
 
 Options:
-    --bib <FILE>       A bibliography file (required).
-    --ref <NAME>       A reference name (required).
+    --bib <FILE>       A bibliography file.
+    --ref <NAME>       A reference name.
     --tex <FILE>       A template file.
 
     --help             Display this message.
@@ -60,9 +61,11 @@ fn start() -> Result<()> {
         help();
     }
 
+    let root = ok!(Directory::new("cite"));
+
     let bibliography = match arguments.get::<String>("bib") {
         Some(bibliography) => bibliography,
-        _ => raise!("a bibliography file is required"),
+        _ => try!(create_bibliography(&root)),
     };
     let reference = match arguments.get::<String>("ref") {
         Some(reference) => reference,
@@ -74,17 +77,15 @@ fn start() -> Result<()> {
             let mut file = ok!(File::open(template));
             let mut template = String::new();
             ok!(file.read_to_string(&mut template));
-            process(&template, &bibliography, &reference)
+            process(&template, &bibliography, &reference, &root)
         },
         _ => {
-            process(TEMPLATE, &bibliography, &reference)
+            process(TEMPLATE, &bibliography, &reference, &root)
         },
     }
 }
 
-fn process(template: &str, bibliography: &str, reference: &str) -> Result<()> {
-    let root = ok!(Directory::new("cite"));
-
+fn process(template: &str, bibliography: &str, reference: &str, root: &Path) -> Result<()> {
     macro_rules! run(
         ($program:expr, $argument:expr) => ({
             let mut command = Command::new($program);
@@ -128,6 +129,17 @@ fn process(template: &str, bibliography: &str, reference: &str) -> Result<()> {
     println!("{}", content.trim());
 
     Ok(())
+}
+
+fn create_bibliography(root: &Path) -> Result<String> {
+    println!("Paste a bibliography content and press Ctrl-D:");
+    let mut content = String::new();
+    ok!(stdin().read_to_string(&mut content));
+
+    let mut file = ok!(File::create(root.join("paper.bib")));
+    ok!(file.write_all(content.as_bytes()));
+
+    Ok(String::from("paper.bib"))
 }
 
 fn replace(text: &str, map: &HashMap<&str, &str>) -> String {
