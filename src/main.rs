@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use temporary::Directory;
 
 const USAGE: &'static str = "
@@ -63,11 +63,15 @@ fn process(template: &str, bibliography: &str, reference: &str) -> Result<()> {
     let root = ok!(Directory::new("cite"));
 
     macro_rules! cmd(
-        ($command:expr) => (Command::new($command));
+        ($command:expr) => (
+            Command::new($command).current_dir(&root)
+                                  .stdout(Stdio::null())
+                                  .stderr(Stdio::null())
+        );
     );
     macro_rules! run(
         ($command:expr) => ({
-            let status = ok!($command.current_dir(&root).status());
+            let status = ok!($command.status());
             if !status.success() {
                 raise!(status);
             }
