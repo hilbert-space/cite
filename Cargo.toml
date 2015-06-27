@@ -10,3 +10,7 @@ description = "The package provides a tool for formatting citations."
 [[bin]]
 name = "cite"
 test = false
+
+[dependencies]
+arguments = "*"
+temporary = "*"
