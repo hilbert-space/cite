@@ -11,6 +11,19 @@ The tool relies on the following commands:
 * [latex][3], and
 * [pdftotext][4].
 
+## Usage
+
+```
+Usage: cite [options]
+
+Options:
+    --bib <FILE>       A bibliography file (required).
+    --ref <NAME>       A reference name (required).
+    --tex <FILE>       A template file.
+
+    --help             Display this message.
+```
+
 ## Contributing
 
 1. Fork the project.
