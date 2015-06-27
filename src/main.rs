@@ -13,9 +13,14 @@ const USAGE: &'static str = "
 Usage: cite [options]
 
 Options:
-    --bib <FILE>       A bibliography file.
-    --ref <NAME>       A reference name.
-    --tex <FILE>       A template file.
+    --bib <FILE>       A bibliography file. If unspecified, the content is read
+                       from the standard input.
+
+    --ref <NAME>       A reference name. If unspecified, the first found
+                       reference is taken.
+
+    --tex <FILE>       A template file. If unspecified, the built-in template is
+                       used, which is based on IEEE’s journal document style.
 
     --help             Display this message.
 ";
