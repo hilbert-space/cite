@@ -14,9 +14,22 @@ Usage: cite [options]
 Options:
     --bib <FILE>       A bibliography file (required).
     --ref <NAME>       A reference name (required).
+    --tex <FILE>       A template file.
 
     --help             Display this message.
 ";
+
+const TEMPLATE: &'static str = r#"
+\documentclass[journal]{IEEEtran}
+\pagestyle{empty}
+\renewcommand{\refname}{}
+
+\begin{document}
+\nocite{<reference>}
+\bibliography{IEEEabrv,<bibliography>}
+\bibliographystyle{IEEEtran}
+\end{document}
+"#;
 
 macro_rules! ok(
     ($result:expr) => (match $result {
@@ -56,7 +69,17 @@ fn start() -> Result<()> {
         _ => raise!("a reference name is required"),
     };
 
-    process(TEMPLATE.trim(), &bibliography, &reference)
+    match arguments.get::<String>("tex") {
+        Some(ref template) => {
+            let mut file = ok!(File::open(template));
+            let mut template = String::new();
+            ok!(file.read_to_string(&mut template));
+            process(&template, &bibliography, &reference)
+        },
+        _ => {
+            process(TEMPLATE, &bibliography, &reference)
+        },
+    }
 }
 
 fn process(template: &str, bibliography: &str, reference: &str) -> Result<()> {
@@ -107,6 +130,14 @@ fn process(template: &str, bibliography: &str, reference: &str) -> Result<()> {
     Ok(())
 }
 
+fn replace(text: &str, map: &HashMap<&str, &str>) -> String {
+    let mut text = text.to_string();
+    for (key, value) in map {
+        text = text.replace(key, value);
+    }
+    text
+}
+
 fn help() -> ! {
     println!("{}", USAGE.trim());
     std::process::exit(0);
@@ -118,23 +149,3 @@ fn fail(error: Error) -> ! {
     stderr().write_all(message.as_bytes()).unwrap();
     std::process::exit(1);
 }
-
-fn replace(text: &str, map: &HashMap<&str, &str>) -> String {
-    let mut text = text.to_string();
-    for (key, value) in map {
-        text = text.replace(key, value);
-    }
-    text
-}
-
-const TEMPLATE: &'static str = r#"
-\documentclass[journal]{IEEEtran}
-\pagestyle{empty}
-\renewcommand{\refname}{}
-
-\begin{document}
-\nocite{<reference>}
-\bibliography{IEEEabrv,<bibliography>}
-\bibliographystyle{IEEEtran}
-\end{document}
-"#;
