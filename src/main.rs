@@ -4,8 +4,8 @@ extern crate temporary;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{stderr, stdin, stdout, Read, Write};
-use std::path::Path;
+use std::io::{BufRead, BufReader, Read, Write, stderr, stdin, stdout};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use temporary::Directory;
 
@@ -64,12 +64,16 @@ fn start() -> Result<()> {
     let root = ok!(Directory::new("cite"));
 
     let bibliography = match arguments.get::<String>("bib") {
-        Some(bibliography) => bibliography,
-        _ => try!(create_bibliography(&root)),
+        Some(ref bibliography) => PathBuf::from(bibliography),
+        _ => {
+            let path = root.join("paper.bib").to_path_buf();
+            try!(create_bibliography(&path));
+            path
+        },
     };
     let reference = match arguments.get::<String>("ref") {
         Some(reference) => reference,
-        _ => raise!("a reference name is required"),
+        _ => try!(find_reference(&bibliography)),
     };
 
     match arguments.get::<String>("tex") {
@@ -85,7 +89,7 @@ fn start() -> Result<()> {
     }
 }
 
-fn process(template: &str, bibliography: &str, reference: &str, root: &Path) -> Result<()> {
+fn process(template: &str, bibliography: &Path, reference: &str, root: &Path) -> Result<()> {
     macro_rules! run(
         ($program:expr, $argument:expr) => ({
             let mut command = Command::new($program);
@@ -104,7 +108,7 @@ fn process(template: &str, bibliography: &str, reference: &str, root: &Path) -> 
 
     {
         let mut map = HashMap::new();
-        map.insert("<bibliography>", bibliography);
+        map.insert("<bibliography>", bibliography.to_str().unwrap());
         map.insert("<reference>", reference);
         let tex = replace(template, &map);
 
@@ -131,15 +135,46 @@ fn process(template: &str, bibliography: &str, reference: &str, root: &Path) -> 
     Ok(())
 }
 
-fn create_bibliography(root: &Path) -> Result<String> {
+fn create_bibliography(path: &Path) -> Result<()> {
     println!("Paste a bibliography content and press Ctrl-D:");
     let mut content = String::new();
     ok!(stdin().read_to_string(&mut content));
 
-    let mut file = ok!(File::create(root.join("paper.bib")));
+    let mut file = ok!(File::create(path));
     ok!(file.write_all(content.as_bytes()));
 
-    Ok(String::from("paper.bib"))
+    Ok(())
+}
+
+fn find_reference(path: &Path) -> Result<String> {
+    let file = ok!(File::open(path));
+    let file = BufReader::new(file);
+    for line in file.lines() {
+        let line = ok!(line);
+        if let Some(reference) = detect_reference(&line) {
+            return Ok(reference);
+        }
+    }
+    raise!("failed to find a reference; try specifying one explicitly");
+}
+
+fn detect_reference(line: &str) -> Option<String> {
+    let line = line.trim();
+    if !line.starts_with('@') {
+        return None;
+    }
+    let i = match line.find('{') {
+        Some(i) => i + 1,
+        _ => return None,
+    };
+    let j = match line.find(',') {
+        Some(j) => j,
+        _ => line.len(),
+    };
+    if i >= j {
+        return None
+    }
+    Some(String::from((&line[i..j]).trim()))
 }
 
 fn replace(text: &str, map: &HashMap<&str, &str>) -> String {
