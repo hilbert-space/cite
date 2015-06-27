@@ -1,6 +1,7 @@
 extern crate arguments;
 extern crate temporary;
 
+use std::collections::HashMap;
 use std::fmt::Display;
 
 const USAGE: &'static str = "
@@ -42,6 +43,12 @@ fn start() -> Result<()> {
         help();
     }
 
+    let mut map = HashMap::new();
+    map.insert("<bibliography>", "Bibliography!");
+    map.insert("<citation>", "Citation!");
+
+    println!("{}", replace(LATEX_TEMPLATE.trim(), &map));
+
     Ok(())
 }
 
@@ -56,3 +63,27 @@ fn fail(error: Error) -> ! {
     stderr().write_all(message.as_bytes()).unwrap();
     std::process::exit(1);
 }
+
+fn replace(text: &str, map: &HashMap<&str, &str>) -> String {
+    let mut text = text.to_string();
+    for (key, value) in map {
+        text = text.replace(key, value);
+    }
+    text
+}
+
+const LATEX_TEMPLATE: &'static str = r#"
+\documentclass[journal]{IEEEtran}
+\pagestyle{empty}
+\renewcommand{\refname}{}
+
+\begin{filecontents}{bibliography.bib}
+<bibliography>
+\end{filecontents}
+
+\begin{document}
+\nocite{<citation>}
+\bibliography{IEEEabrv,bibliography.bib}
+\bibliographystyle{IEEEtran}
+\end{document}
+"#;
