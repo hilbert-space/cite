@@ -1,0 +1,12 @@
+[package]
+name = "cite"
+version = "0.0.1"
+authors = ["Ivan Ukhov <ivan.ukhov@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/IvanUkhov/cite"
+homepage = "https://github.com/IvanUkhov/cite"
+description = "The package provides a tool for formatting citations."
+
+[[bin]]
+name = "cite"
+test = false
