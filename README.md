@@ -1,4 +1,4 @@
-# Cite
+# Cite [![Version][version-img]][version-url] [![Status][status-img]][status-url]
 
 The package provides a tool for formatting citations.
 
@@ -34,3 +34,8 @@ Options:
 [2]: http://linux.die.net/man/1/dvipdf
 [3]: http://www.latex-project.org
 [4]: http://www.foolabs.com/xpdf
+
+[version-img]: https://img.shields.io/crates/v/cite.svg
+[version-url]: https://crates.io/crates/cite
+[status-img]: https://travis-ci.org/IvanUkhov/cite.svg?branch=master
+[status-url]: https://travis-ci.org/IvanUkhov/cite
