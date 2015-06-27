@@ -4,8 +4,8 @@ extern crate temporary;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{Read, Write};
-use std::process::{Command, Stdio};
+use std::io::{stderr, stdout, Read, Write};
+use std::process::Command;
 use temporary::Directory;
 
 const USAGE: &'static str = "
@@ -85,18 +85,18 @@ fn start() -> Result<()> {
 fn process(template: &str, bibliography: &str, reference: &str) -> Result<()> {
     let root = ok!(Directory::new("cite"));
 
-    macro_rules! cmd(
-        ($command:expr) => (
-            Command::new($command).current_dir(&root)
-                                  .stdout(Stdio::null())
-                                  .stderr(Stdio::null())
-        );
-    );
     macro_rules! run(
-        ($command:expr) => ({
-            let status = ok!($command.status());
-            if !status.success() {
-                raise!(status);
+        ($program:expr, $argument:expr) => ({
+            let mut command = Command::new($program);
+            command.arg($argument).current_dir(&root);
+            let output = match command.output() {
+                Ok(output) => output,
+                Err(error) => raise!(format!("`{}` has failed: {}", $program, error)),
+            };
+            if !output.status.success() {
+                let _ = stdout().write_all(&output.stdout);
+                let _ = stderr().write_all(&output.stderr);
+                raise!(format!("`{}` has failed", $program));
             }
         });
     );
@@ -111,12 +111,12 @@ fn process(template: &str, bibliography: &str, reference: &str) -> Result<()> {
         ok!(file.write_all(tex.as_bytes()));
     }
 
-    run!(cmd!("latex").arg("paper.tex"));
-    run!(cmd!("bibtex").arg("paper"));
-    run!(cmd!("latex").arg("paper.tex"));
-    run!(cmd!("latex").arg("paper.tex"));
-    run!(cmd!("dvipdf").arg("paper.dvi"));
-    run!(cmd!("pdftotext").arg("paper.pdf"));
+    run!("latex", "paper.tex");
+    run!("bibtex", "paper");
+    run!("latex", "paper.tex");
+    run!("latex", "paper.tex");
+    run!("dvipdf", "paper.dvi");
+    run!("pdftotext", "paper.pdf");
 
     let mut buffer = Vec::new();
     {
@@ -144,8 +144,7 @@ fn help() -> ! {
 }
 
 fn fail(error: Error) -> ! {
-    use std::io::{stderr, Write};
     let message = format!("Error: {}.\n{}", &*error, USAGE);
-    stderr().write_all(message.as_bytes()).unwrap();
+    let _ = stderr().write_all(message.as_bytes());
     std::process::exit(1);
 }
